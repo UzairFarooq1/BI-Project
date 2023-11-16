@@ -94,6 +94,7 @@ if (require("RColorBrewer")) {
   install.packages("RColorBrewer", dependencies = TRUE,
                    repos = "https://cloud.r-project.org")
 }
+install.packages("plotly")
 
 library(arules)
 library(arulesViz)
@@ -105,6 +106,8 @@ library(magrittr)
 library(dplyr)
 library(plyr)
 library(writexl)
+library(plotly)
+
 
 
 # STEP 2. Load and pre-process the dataset ----
@@ -136,6 +139,9 @@ sales$Quantity_Ordered <- as.numeric(sales$Quantity_Ordered)
 
 # Convert Price Each to numeric
 sales$Price_Each <- as.numeric(sales$Price_Each)
+
+missing_values <- any(is.na(sales[, c("Quantity_Ordered", "Price_Each")])) ||
+  any(!is.numeric(sales[, c("Quantity_Ordered", "Price_Each")]))
 
 # Convert Date to Date type
 sales$Order_Date <- as.Date(sales$Order_Date, format = "%m/%d/%Y")  
@@ -196,3 +202,33 @@ anova_result <- aov(Quantity_Ordered ~ Product, data = sales)
 summary(anova_result)
 
 
+
+# Univariate plot for Quantity Ordered
+ggplot(sales, aes(x = Quantity_Ordered)) +
+  geom_histogram(binwidth = 1, fill = "blue", color = "black", alpha = 0.7) +
+  labs(title = "Distribution of Quantity Ordered", x = "Quantity Ordered", y = "Frequency")
+
+# Univariate plot for Price Each
+ggplot(sales, aes(x = Price_Each)) +
+  geom_histogram(binwidth = 5, fill = "green", color = "black", alpha = 0.7) +
+  labs(title = "Distribution of Price Each", x = "Price Each", y = "Frequency")
+
+
+# Multivariate plot for Quantity Ordered and Price Each
+ggplot(sales, aes(x = Quantity_Ordered, y = Price_Each)) +
+  geom_point(color = "red", alpha = 0.5) +
+  labs(title = "Scatter Plot of Quantity Ordered vs. Price Each", x = "Quantity Ordered", y = "Price Each")
+
+
+# Multivariate 3D scatter plot for Quantity Ordered, Price Each, and Product
+plot_ly(sales, x = ~Quantity_Ordered, y = ~Price_Each, z = ~Product, color = ~Product,
+        type = "scatter3d", mode = "markers") %>%
+  layout(scene = list(xaxis = list(title = "Quantity Ordered"),
+                      yaxis = list(title = "Price Each"),
+                      zaxis = list(title = "Product")))
+
+#heatmap(sales[, c("Quantity_Ordered", "Price_Each")],
+ #       col = colorRamp2(c(min(sales$Quantity_Ordered, na.rm = TRUE), mean(sales$Quantity_Ordered, na.rm = TRUE), max(sales$Quantity_Ordered, na.rm = TRUE)),
+  #                       c("blue", "white", "red")),
+   #     show_row_names = FALSE,
+    #    show_column_names = TRUE)

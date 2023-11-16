@@ -128,6 +128,9 @@ colnames(sales)[5] <- "Order_Date"
 
 str(sales)
 
+print(sales)
+summary(sales)
+
 # Convert Quantity Ordered to numeric
 sales$Quantity_Ordered <- as.numeric(sales$Quantity_Ordered)
 
@@ -186,5 +189,10 @@ correlation <- cor(sales$Quantity_Ordered, sales$Price_Each)
 cat("Correlation between Quantity Ordered and Price Each:", correlation, "\n")
 
 
-print(sales)
-summary(sales)
+# Perform ANOVA
+anova_result <- aov(Quantity_Ordered ~ Product, data = sales)
+
+# Display the ANOVA results
+summary(anova_result)
+
+

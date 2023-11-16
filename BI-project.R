@@ -140,9 +140,6 @@ sales$Quantity_Ordered <- as.numeric(sales$Quantity_Ordered)
 # Convert Price Each to numeric
 sales$Price_Each <- as.numeric(sales$Price_Each)
 
-missing_values <- any(is.na(sales[, c("Quantity_Ordered", "Price_Each")])) ||
-  any(!is.numeric(sales[, c("Quantity_Ordered", "Price_Each")]))
-
 # Convert Date to Date type
 sales$Order_Date <- as.Date(sales$Order_Date, format = "%m/%d/%Y")  
 
@@ -232,3 +229,26 @@ plot_ly(sales, x = ~Quantity_Ordered, y = ~Price_Each, z = ~Product, color = ~Pr
   #                       c("blue", "white", "red")),
    #     show_row_names = FALSE,
     #    show_column_names = TRUE)
+
+
+
+# Check for missing values using summary
+summary(sales)
+
+# Check for missing values using is.na
+any_missing <- any(is.na(sales))
+
+if (any_missing) {
+  cat("There are missing values in the dataset.\n")
+} else {
+  cat("There are no missing values in the dataset.\n")
+}
+
+#Dealing with the empty/null fields
+sales <- na.omit(sales)
+any_missing <- any(is.na(sales))
+if (any_missing) {
+  cat("There are missing values in the dataset.\n")
+} else {
+  cat("There are no missing values in the dataset.\n")
+}

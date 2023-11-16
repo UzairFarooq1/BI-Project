@@ -94,7 +94,7 @@ if (require("RColorBrewer")) {
   install.packages("RColorBrewer", dependencies = TRUE,
                    repos = "https://cloud.r-project.org")
 }
-install.packages("plotly")
+# install.packages("plotly")
 
 library(arules)
 library(arulesViz)
@@ -119,7 +119,7 @@ library(plotly)
 sales <- read_csv("data/Updated_sales.csv")
 
 
-
+View(sales)
 #Descriptive statistics
 dim(sales)
 
@@ -236,19 +236,179 @@ plot_ly(sales, x = ~Quantity_Ordered, y = ~Price_Each, z = ~Product, color = ~Pr
 summary(sales)
 
 # Check for missing values using is.na
+
 any_missing <- any(is.na(sales))
 
 if (any_missing) {
-  cat("There are missing values in the dataset.\n")
+  cat("There are  missing values in the dataset.\n")
 } else {
   cat("There are no missing values in the dataset.\n")
 }
 
-#Dealing with the empty/null fields
-sales <- na.omit(sales)
-any_missing <- any(is.na(sales))
-if (any_missing) {
-  cat("There are missing values in the dataset.\n")
-} else {
-  cat("There are no missing values in the dataset.\n")
-}
+#remove null values
+#sales <- sales[complete.cases(sales), ]
+
+
+# Verify if any null values are left in the dataset
+#any_missing <- any(is.na(sales))
+
+#if (any_missing) {
+#  cat("There are still missing values in the dataset.\n")
+#} else {
+#  cat("All rows with null values have been removed.\n")
+#}
+
+
+
+
+#remove unwanted columns for association rules
+sales_removed_vars <-
+  sales %>% dplyr::select(-Address,-Quantity_Ordered,-Price_Each)
+
+dim(sales_removed_vars)
+View(sales_removed_vars)
+
+str(sales_removed_vars)
+dim(sales_removed_vars)
+head(sales_removed_vars)
+
+#Split Data
+transaction_data <-
+  plyr::ddply(sales_removed_vars,
+              c("Order_ID", "Order_Date"),
+              function(df1) {
+                paste(df1$Product, collapse = ",")
+              }
+  )
+
+
+#Only remain with products
+transaction_data <-
+  transaction_data %>%
+  dplyr::select("items" = V1)
+
+
+anyNA(transaction_data)
+
+## Save the transactions in CSV format ----
+write.csv(transaction_data,
+          "data/transactions_basket_format.csv",
+          quote = FALSE, row.names = FALSE)
+
+## Read the transactions from the CSV file ----
+tr <-
+  read.transactions("data/transactions_basket_format.csv",
+                    format = "basket",
+                    header = TRUE,
+                    rm.duplicates = TRUE,
+                    sep = ","
+  )
+
+print(tr)
+summary(tr)
+
+# Create an item frequency plot for the top  items 10
+itemFrequencyPlot(tr, topN = 10, type = "absolute",
+                  col = brewer.pal(8, "Pastel2"),
+                  main = "Absolute Item Frequency Plot",
+                  horiz = TRUE,
+                  mai = c(1, 1, 1, 1))
+
+# We can set the minimum support and confidence levels for rules to be
+# generated.
+
+association_rules <- apriori(tr, 
+                             parameter = list(support = 0.001,
+                                              confidence = 0.4,
+                                              maxlen = 10))
+
+
+
+
+# Print the association rules ----
+
+summary(association_rules)
+inspect(association_rules)
+
+
+### Remove redundant rules ----
+# We can remove the redundant rules as follows:
+# Number of rules in the association_rules
+subset_rules <-
+  which(colSums(is.subset(association_rules,
+                          association_rules)) > 1)
+#getting the length
+num_rules <- length(subset_rules)
+length(subset_rules)
+
+# Create a sequence of indexes for rules to be removed (1st, 3rd, 5th, etc.) hence remaining with one of each
+indexes_to_remove <- seq(1, num_rules, by = 2)
+
+# Remove the rules at the specified indexes
+association_rules_no_reps <- association_rules[-indexes_to_remove, ]
+
+# Print summary and inspect the non-redundant rules
+summary(association_rules_no_reps)
+inspect(association_rules_no_reps)
+plot(association_rules_no_reps)
+
+
+
+write(association_rules_no_reps,
+      file = "rules/association_rules_based_on_product_name.csv")
+
+#Find specific rules ----
+# Which product(s), if bought, result in a customer purchasing
+# "Samsung USB Type-C to Type-C"?
+USB_C_Charging_Cable <-  
+  apriori(tr, parameter = list(supp = 0.001, conf = 0.05),
+          appearance = list(default = "lhs",
+                            rhs = "Samsung USB Type-C to Type-C"))
+inspect(head(USB_C_Charging_Cable))
+
+# Which product(s) are bought if a customer purchases
+# "iPhone,Google Phone"?
+iPhone_Google_Phone <- # nolint
+  apriori(tr, parameter = list(supp = 0.001, conf = 0.05),
+          appearance = list(lhs = c("Google Pixel 8 Pro", "iPhone 14 Pro Max"), # nolint
+                            default = "rhs"))
+inspect(head(iPhone_Google_Phone))
+
+#Visualize the rules ----
+# Filter rules with confidence greater than 0.85 or 85%
+rules_to_plot <-
+  association_rules_no_reps[quality(association_rules_no_reps)$confidence > 0.1] # nolint
+
+View(association_rules_no_reps)
+
+rules <- as(association_rules_no_reps, "data.frame")
+
+# Save the rules to an Excel file
+write_csv(rules, "association_rules.csv")
+
+# Save the data frame to an Excel file using the writexl package
+library(writexl)
+write_xlsx(rules, "association_rules.csv")
+
+
+#Plot SubRules.
+plot(rules_to_plot)
+plot(rules_to_plot, method = "two-key plot")
+
+top_rules_to_plot <- head(rules_to_plot, n =13, by = "confidence")
+#install.packages("visNetwork")
+plot(top_rules_to_plot, method = "graph",  engine = "htmlwidget")
+
+saveAsGraph(head(rules_to_plot, n = 1000, by = "lift"),
+            file = "graph/association_rules.graphml")
+
+
+# Filter top 20 rules with highest lift
+rules_to_plot_by_lift <- head(rules_to_plot, n = 20, by = "lift")
+plot(rules_to_plot_by_lift, method = "paracoord")
+
+plot(rules_to_plot_by_lift, method = "grouped")
+
+
+
+

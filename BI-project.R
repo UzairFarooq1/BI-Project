@@ -94,8 +94,20 @@ if (require("RColorBrewer")) {
   install.packages("RColorBrewer", dependencies = TRUE,
                    repos = "https://cloud.r-project.org")
 }
+if (!require("randomForest")) {
+  install.packages("randomForest", dependencies = TRUE)
+}
+if (!require("caret")) {
+  install.packages("caret", dependencies = TRUE)
+}
+if (!require("mlbench")) {
+  install.packages("mlbench", dependencies = TRUE)
+}
 # install.packages("plotly")
 
+library(randomForest)
+library(caret)
+library(mlbench)
 library(arules)
 library(arulesViz)
 library(tidyverse)
@@ -411,4 +423,33 @@ plot(rules_to_plot_by_lift, method = "grouped")
 
 
 
+
+str(sales)
+#hyper parameter tuning
+# Assuming 'Class' is the dependent variable
+dependent_variable <- "Product"
+
+# Set seed and metric
+set.seed(7)
+metric <- "Accuracy"
+
+# Define the tuning parameters
+train_control <- trainControl(method = "repeatedcv", number = 10, repeats = 3)
+
+# STEP 3. Train the Model with Default Parameters ----
+model_default <- train(sales$Product ~ ., data = sales, method = "rf", metric = metric, trControl = train_control)
+print(model_default)
+
+# STEP 4. Apply Random Search to Identify the Best 'mtry' Value ----
+train_control_random <- trainControl(method = "repeatedcv", number = 10, repeats = 3, search = "random")
+model_random_search <- train(sales$Class ~ ., data = sales, method = "rf", metric = metric, tuneLength = 12, trControl = train_control_random)
+print(model_random_search)
+plot(model_random_search)
+
+# STEP 5. Apply Grid Search to Identify the Best 'mtry' Value ----
+tunegrid <- expand.grid(.mtry = c(1:10))
+train_control_grid <- trainControl(method = "repeatedcv", number = 10, repeats = 3, search = "grid")
+model_grid_search <- train(sales$Class ~ ., data = sales, method = "rf", metric = metric, tuneGrid = tunegrid, trControl = train_control_grid)
+print(model_grid_search)
+plot(model_grid_search)
 

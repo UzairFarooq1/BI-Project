@@ -367,7 +367,7 @@ plot(association_rules_no_reps)
 
 
 write(association_rules_no_reps,
-      file = "rules/association_rules_based_on_product_name.csv")
+      file = "data/association_rules_based_on_product_name.csv")
 
 #Find specific rules ----
 # Which product(s), if bought, result in a customer purchasing
@@ -442,7 +442,7 @@ print(model_default)
 
 # STEP 4. Apply Random Search to Identify the Best 'mtry' Value ----
 train_control_random <- trainControl(method = "repeatedcv", number = 10, repeats = 3, search = "random")
-model_random_search <- train(sales$Class ~ ., data = sales, method = "rf", metric = metric, tuneLength = 12, trControl = train_control_random)
+model_random_search <- train(sales$Product ~ ., data = sales, method = "rf", metric = metric, tuneLength = 12, trControl = train_control_random)
 print(model_random_search)
 plot(model_random_search)
 

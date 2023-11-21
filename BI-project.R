@@ -426,30 +426,63 @@ plot(rules_to_plot_by_lift, method = "grouped")
 
 str(sales)
 #hyper parameter tuning
-# Assuming 'Class' is the dependent variable
+# Assuming 'Product' is the correct dependent variable
 dependent_variable <- "Product"
 
-# Set seed and metric
+# Set seed
 set.seed(7)
-metric <- "Accuracy"
-
-# Define the tuning parameters
-train_control <- trainControl(method = "repeatedcv", number = 10, repeats = 3)
 
 # STEP 3. Train the Model with Default Parameters ----
-model_default <- train(sales$Product ~ ., data = sales, method = "rf", metric = metric, trControl = train_control)
-print(model_default)
+model_default <- arules::apriori(sales, parameter = list(support = 0.1, confidence = 0.5))
 
-# STEP 4. Apply Random Search to Identify the Best 'mtry' Value ----
-train_control_random <- trainControl(method = "repeatedcv", number = 10, repeats = 3, search = "random")
-model_random_search <- train(sales$Product ~ ., data = sales, method = "rf", metric = metric, tuneLength = 12, trControl = train_control_random)
-print(model_random_search)
-plot(model_random_search)
+# Function to calculate confidence
+calculate_confidence <- function(model) {
+  confidence <- arules::interestMeasure(model, measure = "confidence")
+  return(mean(confidence, na.rm = TRUE))  # Use mean confidence as an example
+}
 
-# STEP 5. Apply Grid Search to Identify the Best 'mtry' Value ----
-tunegrid <- expand.grid(.mtry = c(1:10))
-train_control_grid <- trainControl(method = "repeatedcv", number = 10, repeats = 3, search = "grid")
-model_grid_search <- train(sales$Class ~ ., data = sales, method = "rf", metric = metric, tuneGrid = tunegrid, trControl = train_control_grid)
-print(model_grid_search)
-plot(model_grid_search)
+# Calculate confidence for the default model
+confidence_default <- calculate_confidence(model_default)
+print(confidence_default)
+
+# STEP 4. Manually Iterate Over Different Parameter Combinations ----
+parameter_grid <- expand.grid(support = seq(0.05, 0.2, 0.05), confidence = seq(0.4, 0.7, 0.1))
+
+best_model <- NULL
+best_confidence <- 0
+
+for (i in 1:nrow(parameter_grid)) {
+  params <- parameter_grid[i, ]
+  model <- arules::apriori(sales, parameter = params)
+  current_confidence <- calculate_confidence(model)
+  
+  if (current_confidence > best_confidence) {
+    best_confidence <- current_confidence
+    best_model <- model
+  }
+}
+
+# Print the best model
+print(best_model)
+
+
+#Ensembling
+sales_binary <- arules::transactions(sales)
+
+# Create a list to store models
+model_list <- list()
+
+# Model 1
+model_list[["Model1"]] <- arules::apriori(sales, parameter = list(support = 0.1, confidence = 0.5))
+
+# Model 2
+model_list[["Model2"]] <- arules::apriori(sales, parameter = list(support = 0.15, confidence = 0.6))
+
+# ... Add more models as needed
+
+# Stacked model (a simple list in this case)
+stacked_model <- list(models = model_list)
+
+# Print the stacked model
+print(stacked_model)
 

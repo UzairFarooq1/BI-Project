@@ -104,7 +104,12 @@ if (!require("mlbench")) {
   install.packages("mlbench", dependencies = TRUE)
 }
 # install.packages("plotly")
+# Install and load required packages
+if (!require("plumber")) install.packages("plumber", dependencies = TRUE)
+if (!require("arules")) install.packages("arules", dependencies = TRUE)
 
+library(plumber)
+library(arules)
 library(randomForest)
 library(caret)
 library(mlbench)
@@ -486,3 +491,38 @@ stacked_model <- list(models = model_list)
 # Print the stacked model
 print(stacked_model)
 
+
+#Save the model
+saveRDS(best_model, file = "model/best_model.rds")
+
+
+# Load your association rule model (replace "best_model.rds" with the actual file name)
+best_model <- readRDS("model/best_model.rds")
+
+
+#Load the association rules model
+model <- readRDS("model/best_model.rds")
+
+# Define the plumber API
+#* @apiTitle Association Rules Mining API
+#* @apiDescription Predict related products based on input product
+#* @param product The input product
+#* @get /related_products
+function(product) {
+  # Function to predict related products
+  predict_related_products <- function(product, model) {
+    # Your logic to find related products using the association rules model
+    # Replace this with your actual logic
+    related_products <- c("Product1", "Product2", "Product3")
+    return(related_products)
+  }
+  
+  # Call the prediction function
+  result <- predict_related_products(product, model)
+  
+  # Return the result as JSON
+  return(list(result = result))
+}
+
+# Save the plumber API to a file
+plumber::plumb("association_rules_api.R")$run(port = 8000)
